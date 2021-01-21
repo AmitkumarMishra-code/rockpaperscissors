@@ -8,7 +8,7 @@ const winCondition = {
 }
 
 const admin = require('firebase-admin');            // https://firebase.google.com/docs/firestore
-var serviceAccount = require("./rockpaperscissors-35744-firebase-adminsdk-gqcn3-b4a5bc82e1.json");
+var serviceAccount = require("./rockpaperscissors-35744-firebase-adminsdk-gqcn3-b4a5bc82e1.json");          // unique authorization key for database
 const date = new Date()
 
 const firebaseConfig = {
@@ -25,7 +25,6 @@ let users = []
 
 io.on('connection', (socket) => {
     console.log('a user connected');
-    console.log(socket.id)
     socket.on('disconnect', () => {
         console.log('user disconnected');
     });
@@ -35,31 +34,41 @@ io.on('connection', (socket) => {
         users.push([socket.id, msg, choice])
         if (users.length == 2) {
             checkGameStatus(users)
+            // sending game status message to both players
             io.to(users[0][0]).emit(eventName, users[1][1] + ". " + users[0][3])
             io.to(users[1][0]).emit(eventName, users[0][1] + ". " + users[1][3])
+            
+            // setting up our database parameters
             rpsChatRef = db.collection('rpschat').doc('GameNum' + gameId + "-" + getIdentifier())
             storeData(users)
             console.log("game id = " + gameId)
-            users = []
+            users = []                          // emptying the users array for next round of game
             gameId++
         }
     });
 });
 
+// function to determine game status. Win/Lose or Draw
 function checkGameStatus(users) {
     if (users[0][2] == users[1][2]) {
         users[0].push('Draw')
         users[1].push('Draw')
     }
     else {
+        // storing win/lose message for each player
         users[0].push(winCondition[users[0][2]]['lose'] == users[1][2] ? "You Lose :(" : "You Win :)")
         users[1].push(winCondition[users[1][2]]['lose'] == users[0][2] ? "You Lose :(" : "You Win :)")
     }
 }
 
+
+// Function to store game data to Firebase Firestore db
 async function storeData(users) {
+    // slicing the name of both players
     let playerOne = users[0][1].slice(0, users[0][1].indexOf(' '))
     let playerTwo = users[1][1].slice(0, users[1][1].indexOf(' '))
+    
+    // sending data to database
     await rpsChatRef.set({
         id: gameId,
         player1: { name: playerOne, choice: users[0][2] },
@@ -68,6 +77,7 @@ async function storeData(users) {
     }).then(() => (console.log('success')), (reason) => console.log('fail - ' + reason))
 }
 
+// function to make a unique time code to our document name, this helps avoid any potential rewrite of our data
 function getIdentifier() {
     return "" + date.getDate() + date.getMonth() + 1 + date.getFullYear() + date.getHours() + date.getMinutes() + date.getSeconds()
 }
