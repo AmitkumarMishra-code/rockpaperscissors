@@ -15,8 +15,8 @@ rl.question("What is your name?\n ", (name) => {
 function message(socket, name, displayMessage) {
     console.log(displayMessage)
     rl.question("(R)ock, (P)aper, (S)cissors?\n", (msg) => {
-        msg = msg.toUpperCase()
-        if (!gameInput.hasOwnProperty(msg)) {
+        msg = msg.toUpperCase()                                     // just to make sure that lower case inputs are alos counted as valid
+        if (!gameInput.hasOwnProperty(msg)) {                       // checking for a valid input
             message(socket, name, "Please make a valid choice...")
         }
         else {
